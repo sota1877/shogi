@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>将棋手順トレーニング</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#b8860b">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{--bg:#fdf6e3;--tx:#2c1a00;--s2:#f5e9c8;--s3:#ede0b0;--br:#d4b870;--gd:#b8860b;--gdh:#fff3cd;--tm:#8b6914;--tf:#a07830;--ti:#fff8e7;--ac:#b8860b;--pb:#e8dcc0;--cs:38px}
+[data-theme=dark]{--bg:#1a1208;--tx:#f0d890;--s2:#241a08;--s3:#2e2210;--br:#6b5020;--gd:#d4a017;--gdh:#2a1f05;--tm:#c89030;--tf:#9a7840;--ti:#1a1208;--ac:#d4a017;--pb:#2a2010}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--tx);font-family:serif;min-height:100vh;display:flex;flex-direction:column;overflow-x:hidden}
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:8px 18px;border-radius:20px;font-size:12px;font-weight:700;z-index:999;opacity:0;transition:opacity 0.3s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1}
+.hm{display:flex;flex-direction:column;gap:12px;padding:4px 0;width:100%;max-width:400px}
+.hmbanner{background:linear-gradient(135deg,#b07010,var(--gd));border-radius:12px;padding:16px;color:#fff;text-align:center}
+.hmbtitle{font-size:16px;font-weight:900;margin-bottom:3px}
+.hmbsub{font-size:11px;opacity:0.85}
+.hmgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.hmtile{background:var(--s2);border:1.5px solid var(--br);border-radius:12px;padding:14px 8px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;text-align:center;-webkit-user-select:none;user-select:none}
+.hmtile:active{background:var(--gdh);border-color:var(--gd)}
+.hmtico{font-size:26px;line-height:1}
+.hmtlbl{font-size:12px;font-weight:800}
+.hmtdesc{font-size:10px;color:var(--tf);line-height:1.3}
+.hmrow{display:flex;gap:8px}
+.howto{display:flex;flex-direction:column;gap:8px;padding:4px 0}
+.hwsec{background:var(--s2);border-radius:10px;padding:10px 12px}
+.hwttl{font-size:12px;font-weight:900;color:var(--gd);margin-bottom:4px}
+.hwbody{font-size:11px;color:var(--tx);line-height:1.7}
+/* ヘッダー */
+.hdr{height:44px;min-height:44px;background:var(--s2);border-bottom:1px solid var(--br);display:flex;align-items:center;padding:0 10px;gap:8px}
+.logo{font-size:13px;font-weight:900;color:var(--gd);flex:1;cursor:pointer;-webkit-user-select:none}
+.hbtn{background:none;border:none;font-size:16px;cursor:pointer;padding:4px;color:var(--tx)}
+.hnew{background:var(--gd);color:var(--ti);border:none;border-radius:6px;font-size:12px;font-weight:800;padding:5px 10px;cursor:pointer}
+/* メイン */
+.main{flex:1;display:flex;flex-direction:column;align-items:center;padding:8px;gap:8px;overflow-y:auto}
+/* モードタブ */
+.tabs{display:flex;gap:4px;width:100%;max-width:400px}
+.tab{flex:1;padding:7px 4px;border:1.5px solid var(--br);border-radius:6px;background:var(--s2);color:var(--tf);font-size:11px;font-weight:800;cursor:pointer}
+.tab.on{background:var(--gd);color:var(--ti);border-color:var(--gd)}
+/* ステータスバー */
+.sbar{display:flex;align-items:center;gap:6px;width:100%;max-width:400px;background:var(--s2);border:1px solid var(--br);border-radius:8px;padding:6px 10px}
+.si{font-size:14px}.st{font-size:11px;font-weight:700}
+.st.ok{color:#2a7a2a}.st.ng{color:#c02020}.st.info{color:var(--tm)}
+/* プログレス */
+.prog{width:100%;max-width:400px;display:none}
+.pb{height:6px;background:var(--s3);border-radius:3px;overflow:hidden}
+.pf{height:100%;background:var(--gd);border-radius:3px;transition:width .3s}
+.pl{display:flex;justify-content:space-between;font-size:10px;color:var(--tf);margin-top:2px}
+/* 盤ラッパー */
+.bwrap{display:flex;flex-direction:column;align-items:center;gap:4px;width:100%;max-width:400px}
+.brow{display:flex;align-items:flex-start;gap:4px}
+/* 持ち駒 */
+.hand{cursor:default;outline:none;caret-color:transparent;-webkit-user-select:none;user-select:none;flex:1;background:var(--pb);border:1px solid var(--br);border-radius:6px;padding:4px 6px;height:60px;min-height:60px;overflow:hidden}
+.ht{font-size:9px;font-weight:900;margin-bottom:2px}
+.ss .ht{color:#8B1A1A}.sg .ht{color:var(--tm)}
+.hps{display:flex;flex-wrap:nowrap;gap:10px;padding:4px 8px 0 2px;align-items:center;overflow-x:auto;overflow-y:hidden}
+.hp{position:relative;display:flex;align-items:center;justify-content:center;flex-shrink:0;width:30px;height:30px;cursor:default;outline:none;caret-color:transparent;-webkit-user-select:none;user-select:none;border-radius:5px;background:var(--bg);border:1.5px solid var(--br)}
+.hp.on{border-color:var(--gd);background:var(--gdh)}
+.hpc{position:absolute;top:-6px;right:-8px;font-size:11px;font-weight:900;font-family:sans-serif;background:#c62828;color:#fff;border:1.5px solid #fff;border-radius:9px;min-width:18px;height:18px;line-height:15px;text-align:center;padding:0 3px;box-shadow:0 1px 2px rgba(0,0,0,.3)}
+.hpt{font-size:19px;font-weight:900;line-height:1}
+.sg .hpt{display:inline-block;transform:rotate(180deg)}[data-rev="1"] .sg .hpt{transform:none}[data-rev="1"] .ss .hpt{transform:rotate(180deg)}
+/* 盤 */
+.bframe{background:var(--pb);border:2px solid var(--br);border-radius:4px;padding:0;position:relative}
+.coord-row{display:flex;gap:0;height:16px}
+.clbl{width:38px;height:16px;line-height:16px;text-align:center;font-size:9px;color:var(--tf);font-weight:700;flex-shrink:0}
+.rlbls{display:flex;flex-direction:column;width:18px;padding-top:2px}
+.rlbl{width:18px;height:38px;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--tf);font-weight:700;flex-shrink:0}
+.grid{outline:none;caret-color:transparent;-webkit-user-select:none;user-select:none;display:grid;grid-template-columns:repeat(9,38px);grid-template-rows:repeat(9,38px)}
+.rev{transform:rotate(180deg)}
+.cell{width:38px;height:38px;border:1px solid rgba(100,60,0,.3);display:flex;align-items:center;justify-content:center;cursor:default;outline:none;caret-color:transparent;-webkit-user-select:none;user-select:none;position:relative;transition:background 0.1s}
+.cell.last{background:#c6ef6acc;box-shadow:inset 0 0 0 2px #8bc34a,0 0 6px #b2e05a}
+.cell.sel{background:#ffe082cc}
+.cell.hint{background:#a5d6a7aa}
+.cell.danger{background:#ef9a9a88}
+.pt{font-size:23px;font-weight:900;line-height:1;user-select:none;-webkit-user-select:none;color:#2c1a00}
+/* 先手視点: 後手駒を逆さに */
+.pt.gote{transform:rotate(180deg)}
+/* 後手視点(rev): 後手駒を正立に、先手駒を逆さに */
+/* .rev .pt.gote は不要（グリッド180+pt180=360=正立） */
+.rev .pt.sente{color:#2c1a00}
+.pt.pro{color:#c02828!important}
+/* コントロール */
+.ctrl{display:flex;gap:6px;width:100%;max-width:400px;flex-wrap:wrap}
+.btn{padding:8px 12px;border-radius:6px;border:1.5px solid var(--br);background:var(--s2);color:var(--tx);font-size:12px;font-weight:800;cursor:pointer;flex:1}
+.btn.danger{border-color:#e06060;color:#c02020}
+.btn.primary{background:var(--gd);color:var(--ti);border-color:var(--gd)}
+/* 棋譜 */
+.seqsec{width:100%;max-width:400px;background:var(--s2);border:1px solid var(--br);border-radius:8px;padding:8px}
+.seqt{font-size:11px;font-weight:900;color:var(--tm)}
+.seql{max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:5px;padding:2px}
+.seqi-left{flex:1;min-width:0}
+.seqi-right{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0}
+.seqi-badge{font-size:10px;font-weight:800;padding:2px 6px;border-radius:10px;white-space:nowrap}
+.badge-moves{background:var(--s3);color:var(--tf)}
+.badge-score{background:#e8f5e9;color:#2e7d32}
+[data-theme=dark] .badge-score{background:#1b5e2033;color:#81c784}
+.badge-new{background:#fff8e1;color:#f57f17}
+[data-theme=dark] .badge-new{background:#f57f1722;color:#ffcc02}
+.seqi-ico{font-size:18px;flex-shrink:0}
+.seqi{padding:9px 10px;border-radius:10px;border:1.5px solid var(--br);background:var(--bg);cursor:pointer;min-height:58px;display:flex;flex-direction:row;align-items:center;gap:8px;user-select:none;-webkit-user-select:none;transition:border-color .15s,background .15s}
+.seqi.on{border-color:var(--gd);background:var(--gdh);box-shadow:0 0 0 2px #b8860b33}
+.seqn{font-size:12px;font-weight:800;line-height:1.3;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.seqm{font-size:10px;color:var(--tf);margin-top:2px;display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+/* コメント */
+.cmtsec{width:100%;max-width:400px;background:var(--s2);border:1px solid var(--br);border-radius:8px;padding:6px 8px}
+.cmtt{font-size:10px;font-weight:900;color:var(--tm);margin-bottom:3px}
+.cmtin{width:100%;border:1.5px solid var(--br);border-radius:6px;background:var(--bg);color:var(--tx);font-size:12px;padding:6px 8px;resize:vertical;font-family:inherit}
+.cmtin:focus{outline:none;border-color:var(--gd)}
+.cmtin[readonly]{border-style:dashed}
+/* 棋譜リスト */
+.mvs{width:100%;max-width:400px;background:var(--s2);border:1px solid var(--br);border-radius:8px;padding:6px 8px;max-height:76px;overflow-y:auto}
+.mvi{font-size:11px;padding:2px 4px;border-radius:4px;cursor:pointer}
+.mvi.on{background:var(--gd);color:var(--ti)}
+/* 手数表示 */
+#mvCnt{font-size:11px;font-weight:800;color:var(--tm)}
+/* ナビゲーション */
+.rnav{display:flex;gap:4px;width:100%;max-width:400px}
+/* モーダル */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+.ov.on{opacity:1;pointer-events:all}
+.modal{background:var(--bg);border-radius:16px 16px 0 0;padding:20px 16px 32px;width:100%;max-width:480px;max-height:85vh;overflow-y:auto;transform:translateY(20px);transition:transform .2s}
+.ov.on .modal{transform:translateY(0)}
+.mttl{font-size:15px;font-weight:900;margin-bottom:14px;color:var(--gd)}
+.fg{margin-bottom:10px}
+.fl{display:block;font-size:11px;font-weight:700;color:var(--tf);margin-bottom:4px}
+.fi{width:100%;padding:8px 10px;border:1.5px solid var(--br);border-radius:8px;background:var(--s2);color:var(--tx);font-size:13px}
+.fi:focus{outline:none;border-color:var(--gd)}
+select.fi{-webkit-appearance:none}
+.mbtns{display:flex;gap:8px;margin-top:16px}
+.mbc{flex:1;padding:11px;border:1.5px solid var(--br);border-radius:8px;background:var(--s2);color:var(--tx);font-size:13px;font-weight:800;cursor:pointer}
+.mbs{flex:2;padding:11px;border:none;border-radius:8px;background:var(--gd);color:var(--ti);font-size:13px;font-weight:800;cursor:pointer}
+/* 長押しメニュー */
+#ctxOverlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.4);display:none}
+#ctxMenu{position:fixed;bottom:0;left:0;right:0;z-index:201;background:var(--s2);border-radius:16px 16px 0 0;padding:12px 0 24px;box-shadow:0 -4px 20px rgba(0,0,0,0.2);display:none}
+#ctxTitle{font-size:13px;font-weight:700;color:var(--tf);padding:4px 20px 12px;border-bottom:1px solid var(--br)}
+
+/* 成りモーダル専用 */
+#promoModal{align-items:center}
+#promoModal .modal{border-radius:16px;padding:24px 20px 28px;width:88%;max-width:340px}
+#promoModal .mttl{font-size:18px;font-weight:900;color:var(--tx);margin-bottom:4px;display:flex;align-items:center;justify-content:space-between}
+#promoModal .mttl-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--tf);padding:0 4px;line-height:1}
+#promoModal #promoPreview{font-size:52px;margin:12px 0 4px}
+#promoModal #promoDesc{font-size:12px;color:var(--tf);margin-bottom:20px}
+#promoModal .mbtns{gap:12px;margin-top:0}
+#promoModal .mbc{flex:1;padding:16px 8px;font-size:15px;font-weight:900;border-radius:10px;border:2px solid var(--br)}
+#promoModal .mbs{flex:1;padding:16px 8px;font-size:15px;font-weight:900;border-radius:10px}
+</style>
+</head>
+<body>
+<header class="hdr">
+  <div class="logo" id="logoBtn">将棋手順トレーニング</div>
+  <span id="mvCnt"></span>
+  <button class="hbtn" id="flipBtn" title="盤面反転" style="display:none">🔃</button>
+  <button class="hbtn" id="themeBtn">🌙</button>
+  <button class="hnew" id="newBtn">＋新規</button>
+</header>
+<main class="main" id="mainArea">
+  <!-- ホーム画面 -->
+  <div id="homeScreen" class="hm" style="display:none">
+    <div class="hmbanner">
+      <div class="hmbtitle">将棋手順トレーニング</div>
+      <div class="hmbsub">手順を記録して繰り返し練習しよう</div>
+    </div>
+    <div class="hmgrid">
+      <div class="hmtile" onclick="homeAction('new')"><div class="hmtico">✏️</div><div class="hmtlbl">手順作成</div><div class="hmtdesc">新しい手順を<br>記録する</div></div>
+      <div class="hmtile" onclick="homeAction('review')"><div class="hmtico">🔍</div><div class="hmtlbl">手順確認</div><div class="hmtdesc">記録済みの手順を<br>見直す</div></div>
+      <div class="hmtile" onclick="homeAction('practice')"><div class="hmtico">🎯</div><div class="hmtlbl">練習</div><div class="hmtdesc">手順を覚えて<br>テストする</div></div>
+      <div class="hmtile" onclick="homeAction('howto')"><div class="hmtico">📖</div><div class="hmtlbl">使い方</div><div class="hmtdesc">アプリの<br>使い方を見る</div></div>
+    </div>
+    <div class="hmrow">
+      <div class="hmtile" style="flex:1;flex-direction:row;justify-content:flex-start;gap:10px;padding:10px 14px" onclick="homeAction('list')">
+        <div style="font-size:22px">📋</div>
+        <div style="text-align:left"><div class="hmtlbl">手順一覧</div><div class="hmtdesc" id="homeSeqCount">0件</div></div>
+      </div>
+      <div class="hmtile" style="padding:10px 14px;flex-direction:row;gap:8px" onclick="homeAction('trash')">
+        <div style="font-size:22px">🗑</div><div class="hmtlbl">ゴミ箱</div>
+      </div>
+    </div>
+  </div>
+  <!-- 手順なし状態 -->
+  <div class="empty" id="emptyState" style="display:none">
+    <div class="eico" style="font-size:48px;font-weight:900;color:var(--ac)">将</div>
+    <div class="en" style="font-size:14px;font-weight:800;margin:8px 0 4px">手順がまだありません</div>
+    <div class="es" style="font-size:12px;color:var(--tf)">「＋新規」ボタンで作成しましょう</div>
+  </div>
+  <!-- ゴミ箱 -->
+  <div id="trashScreen" style="display:none;width:100%;max-width:400px">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0 10px">
+      <span style="font-size:13px;font-weight:900;color:var(--gd)">🗑 ゴミ箱</span>
+      <div style="display:flex;gap:6px">
+        <button id="emptyTrashBtn" onclick="emptyTrash()" style="background:#fee;color:#c00;border:1px solid #fcc;border-radius:6px;font-size:11px;font-weight:800;padding:4px 8px;cursor:pointer">全て削除</button>
+        <button onclick="goHome()" style="background:none;border:none;font-size:12px;color:var(--tf);cursor:pointer">← 戻る</button>
+      </div>
+    </div>
+    <div id="trashList"></div>
+  </div>
+  <!-- 使い方 -->
+  <div id="howtoScreen" class="howto" style="display:none;width:100%;max-width:400px">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0 6px">
+      <span style="font-size:13px;font-weight:900;color:var(--gd)">📖 使い方</span>
+      <button onclick="goHome()" style="background:none;border:none;font-size:12px;color:var(--tf);cursor:pointer">← 戻る</button>
+    </div>
+    <div class="hwsec"><div class="hwttl">✏️ 手順作成</div><div class="hwbody">駒をタップして移動先を選ぶと1手ずつ記録されます。先手・後手が交互に動かせます。</div></div>
+    <div class="hwsec"><div class="hwttl">🔍 手順確認</div><div class="hwbody">◀▶ボタンで1手ずつ確認。記録した手順を最初から再生できます。</div></div>
+    <div class="hwsec"><div class="hwttl">🎯 練習モード</div><div class="hwbody">正しい手を自分で指しましょう。スコアが記録されます。</div></div>
+    <div class="hwsec"><div class="hwttl">🔃 盤面反転</div><div class="hwbody">ヘッダーの🔃で後手視点に切り替え。新規作成時にも設定できます。</div></div>
+    <div class="hwsec"><div class="hwttl">📂 長押しメニュー</div><div class="hwbody">手順カードを長押しすると名称変更・削除ができます。削除はゴミ箱に移動し復元可能です。</div></div>
+  </div>
+  <!-- モードタブ -->
+  <div class="tabs" id="tabsEl" style="display:none">
+    <button class="tab on" id="t0">✏️ 記録</button>
+    <button class="tab" id="t1">🎯 練習</button>
+    <button class="tab" id="t2">🔍 確認</button>
+  </div>
+  <!-- ステータス -->
+  <div class="sbar" id="sbarEl" style="display:none">
+    <span class="si" id="stIco">💡</span>
+    <span class="st info" id="stTxt">駒をタップして選択</span>
+  </div>
+  <!-- プログレス -->
+  <div class="prog" id="progEl">
+    <div class="pb"><div class="pf" id="progF"></div></div>
+    <div class="pl"><span id="progL"></span><span id="progR"></span></div>
+  </div>
+  <!-- 盤ラッパー -->
+  <div class="bwrap" id="bwrapEl" style="display:none">
+    <div class="brow">
+      <div class="hand sg" id="gHandEl">
+        <div class="ht">後手の持ち駒</div>
+        <div class="hps" id="gHandPs"></div>
+      </div>
+    </div>
+    <div class="brow" id="banRow" style="display:inline-flex;flex-direction:column;align-items:flex-start;gap:0">
+      <!-- 列番号（上）: 左に段番号幅分の空白 -->
+      <div style="display:flex;margin-left:2px">
+        <div class="coord-row" id="clblsEl"></div>
+      </div>
+      <!-- 盤+段番号 -->
+      <div style="display:flex;align-items:flex-start">
+        <div class="bframe">
+          <div class="grid" id="gridEl"></div>
+        </div>
+        <div class="rlbls" id="rlblsEl"></div>
+      </div>
+    </div>
+
+    <div class="brow">
+      <div class="hand ss" id="sHandEl">
+        <div class="ht">先手の持ち駒</div>
+        <div class="hps" id="sHandPs"></div>
+      </div>
+    </div>
+  </div>
+  <!-- コメント -->
+  <div class="cmtsec" id="cmtEl" style="display:none">
+    <div class="cmtt" id="cmtTtl">💬 コメント</div>
+    <textarea class="cmtin" id="cmtIn" rows="2" placeholder="この局面のコメント"></textarea>
+  </div>
+  <!-- 棋譜 -->
+  <div class="mvs" id="mvsEl" style="display:none"></div>
+  <!-- コントロール -->
+  <div class="ctrl" id="ctrlEl" style="display:none">
+    <button class="btn danger" id="undoBtn">↩ 1手戻す</button>
+    <button class="btn" id="resetBtn">🔄 リセット</button>
+    <button class="btn primary" id="saveBtn">💾 保存</button>
+  </div>
+  <!-- 確認ナビ -->
+  <div class="rnav" id="rnavEl" style="display:none">
+    <button class="btn" id="rb0">|◀</button>
+    <button class="btn" id="rb1">◀</button>
+    <button class="btn" id="rb2">▶</button>
+    <button class="btn" id="rb3">▶|</button>
+  </div>
+  <!-- 手順セクション -->
+  <div class="seqsec" id="seqsecEl" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+      <span class="seqt">📋 手順一覧</span>
+      <span id="seqCountBadge" style="font-size:10px;font-weight:800;color:var(--tf);background:var(--s3);padding:2px 8px;border-radius:10px">0件</span>
+    </div>
+    <div id="seqList" style="max-height:240px;overflow-y:auto;padding-right:2px"></div>
+  </div>
+</main>
+
+<!-- 成りモーダル -->
+<div class="ov" id="promoModal">
+  <div class="modal" style="text-align:center">
+    <div class="mttl"><span>成りますか？</span><button class="mttl-close" onclick="document.getElementById('promoModal').classList.remove('open')">✕</button></div>
+    <div id="promoPreview" style="display:none"></div>
+    <div id="promoDesc" style="display:none"></div>
+    <div class="mbtns">
+      <button class="mbs" id="promoYes">成る</button>
+      <button class="mbc" id="promoNo">成らない</button>
+    </div>
+  </div>
+</div>
+
+<!-- 名前変更モーダル -->
+<div class="ov" id="renameModal">
+  <div class="modal">
+    <div class="mttl">✏️ 名称変更</div>
+    <div class="fg"><label class="fl">新しい名前</label><input class="fi" id="renameInput" placeholder="手順名を入力"></div>
+    <div class="mbtns">
+      <button class="mbc" onclick="document.getElementById('renameModal').classList.remove('on')">キャンセル</button>
+      <button class="mbs" onclick="submitRename()">変更する</button>
+    </div>
+  </div>
+</div>
+
+<!-- 新規モーダル -->
+<div class="ov" id="newModal">
+  <div class="modal">
+    <div class="mttl">＋ 新しい手順</div>
+    <div class="fg"><label class="fl">手順名 *</label><input class="fi" id="inName" placeholder="例：四間飛車の手順其の壱"></div>
+    <div class="fg">
+      <label class="fl">カテゴリ</label>
+      <select class="fi" id="inCat" onchange="toggleSenpo()">
+        <option>定跡</option><option>手筋</option><option>詰将棋</option><option>その他</option>
+      </select>
+    </div>
+    <div class="fg" id="senpoFg" style="display:block">
+      <label class="fl">戦法名</label>
+      <div style="display:flex;gap:6px;align-items:center">
+        <div style="flex:1">
+          <div style="font-size:10px;font-weight:700;color:var(--tf);margin-bottom:3px" id="lblSenpoMy">▲ 先手（自分）の戦法</div>
+          <input class="fi" id="inSenpoMy" placeholder="例：四間飛車">
+        </div>
+        <div style="font-size:16px;color:var(--tf);padding-top:16px">vs</div>
+        <div style="flex:1">
+          <div style="font-size:10px;font-weight:700;color:var(--tf);margin-bottom:3px" id="lblSenpoOp">△ 後手（相手）の戦法</div>
+          <input class="fi" id="inSenpoOp" placeholder="例：居飛車">
+        </div>
+      </div>
+    </div>
+    <div class="fg"><label class="fl">メモ（任意）</label><input class="fi" id="inMemo" placeholder="ポイントや注意点"></div>
+    <div class="fg"><label class="fl">開始局面</label>
+      <div style="display:flex;gap:8px">
+        <label id="lblInit" style="flex:1;display:flex;align-items:center;gap:6px;border:1.5px solid var(--br);border-radius:8px;padding:8px 10px;cursor:pointer;font-size:12px">
+          <input type="radio" name="sp" value="init" checked> 初手から
+        </label>
+        <label id="lblCur" style="flex:1;display:flex;align-items:center;gap:6px;border:1.5px solid var(--br);border-radius:8px;padding:8px 10px;cursor:pointer;font-size:12px">
+          <input type="radio" name="sp" value="cur"> 現在の盤面
+        </label>
+      </div>
+    </div>
+    <div class="fg"><label class="fl">あなたの視点（自分の駒を下に）</label>
+      <div style="display:flex;gap:8px">
+        <label id="lblVS" style="flex:1;display:flex;align-items:center;gap:6px;border:1.5px solid var(--gd);border-radius:8px;padding:8px 10px;cursor:pointer;font-size:12px">
+          <input type="radio" name="view" value="sente" checked> ▲ 先手（下）
+        </label>
+        <label id="lblVG" style="flex:1;display:flex;align-items:center;gap:6px;border:1.5px solid var(--br);border-radius:8px;padding:8px 10px;cursor:pointer;font-size:12px">
+          <input type="radio" name="view" value="gote"> △ 後手（下）
+        </label>
+      </div>
+    </div>
+    <div class="mbtns">
+      <button class="mbc" onclick="closeModal('newModal')">キャンセル</button>
+      <button class="mbs" onclick="createSeq()">作成する ▶</button>
+    </div>
+  </div>
+</div>
+
+<!-- 長押しメニュー -->
+<div id="ctxOverlay" onclick="closeCtxMenu()"></div>
+<div id="ctxMenu">
+  <div id="ctxTitle"></div>
+  <button onclick="ctxRename()" style="display:flex;align-items:center;gap:12px;width:100%;padding:14px 20px;background:none;border:none;font-size:15px;color:var(--tx);cursor:pointer">✏️ 名称変更</button>
+  <button onclick="ctxDelete()" style="display:flex;align-items:center;gap:12px;width:100%;padding:14px 20px;background:none;border:none;font-size:15px;color:#e04040;cursor:pointer">🗑 削除</button>
+</div>
+<!-- トースト -->
+<div class="toast" id="toastEl"></div>
+
+<script>
+const SK = 'shogi_trainer_v3';
+let seqs = [], trash = [], curId = null, mode = 'record';
+let selCell = null, selHand = null;
+let board = [], sHand = {}, gHand = {};
+let curMv = 0;
+let pendingMode = null;
+
+function saveData() { localStorage.setItem(SK, JSON.stringify({seqs,trash})); }
+function loadData() { try { const d=JSON.parse(localStorage.getItem(SK)||'{}'); seqs=d.seqs||[]; trash=d.trash||[]; } catch(e){ seqs=[]; trash=[]; } }
+function migrateSeqs(){
+  seqs.forEach(seq=>{
+    // firstTurn修正: 常にsenteから
+    if(seq.firstTurn==='gote') seq.firstTurn='sente';
+    if(!seq.ib) return;
+    try{
+      const b=JSON.parse(seq.ib);
+      if(b[1]&&b[1][1]&&b[1][1].k==='角'&&b[1][1].p==='gote'&&
+         b[1][7]&&b[1][7].k==='飛'&&b[1][7].p==='gote'){
+        b[1][1]={k:'飛',p:'gote'}; b[1][7]={k:'角',p:'gote'};
+        if(b[7]){b[7][1]={k:'角',p:'sente'}; b[7][7]={k:'飛',p:'sente'};}
+        seq.ib=JSON.stringify(b);
+      }
+    }catch(e){}
+  });
+}
+
+
+// ======== 駒定義 ========
+const KOMA_LIST = ['玉','飛','角','金','銀','桂','香','歩'];
+const PROMO_MAP = {'歩':'と','香':'成香','桂':'成桂','銀':'成銀','飛':'龍','角':'馬'};
+const DEPROMO_MAP = Object.fromEntries(Object.entries(PROMO_MAP).map(([k,v])=>[v,k]));
+const DISP_K={'成銀':'全','成桂':'圭','成香':'杏'};
+function baseK(k){ return DEPROMO_MAP[k]||k; }
+function isPromoted(k){ return !!DEPROMO_MAP[k]; }
+
+// ======== 初期盤面 ========
+function initBoardData(){
+  const b = Array.from({length:9},()=>Array(9).fill(null));
+  const back = ['香','桂','銀','金','玉','金','銀','桂','香'];
+  back.forEach((k,c)=>{b[0][c]={k,p:'gote'}; b[8][c]={k,p:'sente'};});
+  b[1][1]={k:'飛',p:'gote'}; b[1][7]={k:'角',p:'gote'};
+  b[7][1]={k:'角',p:'sente'}; b[7][7]={k:'飛',p:'sente'};
+  for(let c=0;c<9;c++){b[2][c]={k:'歩',p:'gote'}; b[6][c]={k:'歩',p:'sente'};}
+  return b;
+}
+function initBoard(){
+  const seq = curSeq();
+  if(seq && seq.ib){ board=JSON.parse(seq.ib); sHand=JSON.parse(seq.ish||'{}'); gHand=JSON.parse(seq.igh||'{}'); }
+  else { board=initBoardData(); sHand={}; gHand={}; }
+  curMv=0;
+}
+
+// ======== ボードユーティリティ ========
+function cloneBoard(b){ return b.map(r=>r.map(c=>c?{...c}:null)); }
+function cloneHand(h){ return {...h}; }
+
+// ======== 合法手生成 ========
+function getMoves(k,p,fr,fc){
+  const ms=[];
+  const rev = p==='gote';
+  function d(dr,dc,slide){
+    let r=fr+dr,c=fc+dc;
+    while(r>=0&&r<9&&c>=0&&c<9){
+      if(board[r][c]){if(board[r][c].p!==p)ms.push([r,c]);break;}
+      ms.push([r,c]);
+      if(!slide)break;
+      r+=dr;c+=dc;
+    }
+  }
+  const M={
+    '玉':[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]],
+    '金':[[1,0],[-1,0],[0,1],[0,-1],...(rev?[[1,1],[1,-1]]:[[-1,1],[-1,-1]])],
+    '銀':[[1,1],[1,-1],[-1,1],[-1,-1],...(rev?[[1,0]]:[ [-1,0]])],
+    'と':[[1,0],[-1,0],[0,1],[0,-1],...(rev?[[1,1],[1,-1]]:[[-1,1],[-1,-1]])],
+    '成香':[[1,0],[-1,0],[0,1],[0,-1],...(rev?[[1,1],[1,-1]]:[[-1,1],[-1,-1]])],
+    '成桂':[[1,0],[-1,0],[0,1],[0,-1],...(rev?[[1,1],[1,-1]]:[[-1,1],[-1,-1]])],
+    '成銀':[[1,0],[-1,0],[0,1],[0,-1],...(rev?[[1,1],[1,-1]]:[[-1,1],[-1,-1]])],
+  };
+  const S={'飛':[[1,0],[-1,0],[0,1],[0,-1]],'角':[[ 1,1],[1,-1],[-1,1],[-1,-1]],'龍':[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]],'馬':[[1,1],[1,-1],[-1,1],[-1,-1],[1,0],[-1,0],[0,1],[0,-1]]};
+  if(k==='歩'){const dr=rev?1:-1; const r2=fr+dr; if(r2>=0&&r2<9&&(!board[r2][fc]||board[r2][fc].p!==p))ms.push([r2,fc]); return ms;}
+  if(k==='香'){const dr=rev?1:-1; let r=fr+dr; while(r>=0&&r<9){if(board[r][fc]){if(board[r][fc].p!==p)ms.push([r,fc]);break;}ms.push([r,fc]);r+=dr;} return ms;}
+  if(k==='桂'){const dr=rev?2:-2;[[dr,-1],[dr,1]].forEach(([dr2,dc2])=>{const r=fr+dr2,c=fc+dc2; if(r>=0&&r<9&&c>=0&&c<9&&(!board[r][c]||board[r][c].p!==p))ms.push([r,c]);}); return ms;}
+  if(M[k]){M[k].forEach(([dr,dc])=>d(dr,dc,false)); return ms;}
+  const sd=S[k]?S[k].slice(0,k==='龍'||k==='馬'?4:undefined):null;
+  if(S[k]){
+    const isSlide=k==='飛'||k==='角';
+    const dirs=S[k];
+    dirs.forEach(([dr,dc])=>d(dr,dc,isSlide||(k==='龍'&&(dr===0||dc===0))||(k==='馬'&&(dr!==0&&dc!==0))));
+  }
+  return ms;
+}
+function canMoveTo(k,p,fr,fc,r,c){
+  const ms=getMoves(k,p,fr,fc);
+  return ms.some(([mr,mc])=>mr===r&&mc===c);
+}
+
+// ======== 成り判定 ========
+function canPromote(k){ return !!PROMO_MAP[k]; }
+function needsPromote(k,p,tr){
+  if(!canPromote(k))return false;
+  if(k==='歩'||k==='香')return p==='sente'?tr===0:tr===8;
+  if(k==='桂')return p==='sente'?tr<=1:tr>=7;
+  return false;
+}
+function inZone(p,r){ return p==='sente'?r<=2:r>=6; }
+
+// ======== 現在の手順 ========
+function curSeq(){ return seqs.find(s=>s.id===curId)||null; }
+function isReversed(){ const seq=curSeq(); return seq&&seq.viewSide==='gote'; }
+
+// ======== 現在の手番 ========
+function curTurn(){
+  const seq=curSeq(); if(!seq)return 'sente';
+  return (seq.moves.length%2===0)?seq.firstTurn:(seq.firstTurn==='sente'?'gote':'sente');
+}
+
+// ======== レンダリング ========
+function renderCoords(){
+  const rev=isReversed();
+  const cs=document.getElementById('clblsEl');
+  const rs=document.getElementById('rlblsEl');
+  cs.innerHTML=''; rs.innerHTML='';
+  for(let c=0;c<9;c++){
+    const col=rev?c+1:9-c;
+    const d=document.createElement('div'); d.className='clbl'; d.textContent=col; cs.appendChild(d);
+  }
+  for(let r=0;r<9;r++){
+    const row=rev?'九八七六五四三二一'[r]:'一二三四五六七八九'[r];
+    const d=document.createElement('div'); d.className='rlbl'; d.textContent=row; rs.appendChild(d);
+  }
+}
+
+function renderBoard(){
+  renderCoords();
+  const grid=document.getElementById('gridEl');
+  grid.innerHTML='';
+  if(isReversed()){
+    grid.classList.add('rev');
+    document.getElementById('bwrapEl').setAttribute('data-rev','1');
+  } else {
+    grid.classList.remove('rev');
+    document.getElementById('bwrapEl').removeAttribute('data-rev');
+  }
+  const gh=document.getElementById('gHandEl');
+  const sh=document.getElementById('sHandEl');
+  const ghRow=gh.closest('.brow');
+  const shRow=sh.closest('.brow');
+  if(ghRow&&shRow){
+    const banRow=document.getElementById('banRow');
+    if(isReversed()){
+      ghRow.style.order='2'; shRow.style.order='0'; if(banRow)banRow.style.order='1';
+      gh.querySelector('.ht').textContent='後手の持ち駒（自分）';
+      sh.querySelector('.ht').textContent='先手の持ち駒（相手）';
+    } else {
+      ghRow.style.order='0'; shRow.style.order='2'; if(banRow)banRow.style.order='1';
+      gh.querySelector('.ht').textContent='後手の持ち駒（相手）';
+      sh.querySelector('.ht').textContent='先手の持ち駒（自分）';
+    }
+  }
+  let lastSq=null;
+  { const sq=curSeq(); const lm=sq&&curMv>0?sq.moves[curMv-1]:null;
+    if(lm) lastSq=lm.type==='drop'?[lm.r,lm.c]:[lm.tr,lm.tc]; }
+  for(let r=0;r<9;r++){
+    for(let c=0;c<9;c++){
+      const cell=document.createElement('div');
+      cell.className='cell';
+      const pc=board[r][c];
+      if(pc){
+        const span=document.createElement('span');
+        span.className='pt'+(pc.p==='gote'?' gote':' sente')+(isPromoted(pc.k)?' pro':'');
+        span.textContent=DISP_K[pc.k]||pc.k;
+        cell.appendChild(span);
+        cell.classList.add(pc.p);
+      }
+      // 最終手ハイライト
+      if(lastSq&&lastSq[0]===r&&lastSq[1]===c) cell.classList.add('last');
+      // ハイライト
+      if(selCell&&selCell[0]===r&&selCell[1]===c) cell.classList.add('sel');
+      // ヒント
+      if(selCell){
+        const[sr,sc]=selCell; const spc=board[sr][sc];
+        if(spc&&canMoveTo(spc.k,spc.p,sr,sc,r,c)) cell.classList.add('hint');
+      }
+      if(selHand){
+        // 持ち駒ドロップのヒント - 簡易：空マスのみ
+        if(!pc) cell.classList.add('hint');
+      }
+      cell.addEventListener('click',()=>onCellClick(r,c));
+      grid.appendChild(cell);
+    }
+  }
+  renderHand('sente'); renderHand('gote');
+  renderMvList(); scrollMv(); updMoveCnt(); renderCmt();
+}
+function renderCmt(){
+  const seq=curSeq(); if(!seq)return;
+  const ta=document.getElementById('cmtIn');
+  const c=(seq.comments||{})[curMv]||'';
+  const ttl=document.getElementById('cmtTtl');
+  ttl.textContent='💬 コメント（'+(curMv===0?'開始局面':curMv+'手目 '+seq.moves[curMv-1].notation)+'）';
+  ta.readOnly=mode!=='record';
+  ta.placeholder=mode==='record'?'この局面のコメント':'';
+  if(document.activeElement!==ta||ta.readOnly) ta.value=c;
+}
+function scrollMv(){const el=document.getElementById('mvsEl');if(!el)return;const on=el.querySelector('.mvi.on');if(on)el.scrollTop=on.offsetTop-el.offsetTop-el.clientHeight/2+on.clientHeight/2;else el.scrollTop=el.scrollHeight;}
+
+function renderHand(p){
+  const h=p==='sente'?sHand:gHand;
+  const el=document.getElementById(p==='sente'?'sHandPs':'gHandPs');
+  el.innerHTML='';
+  KOMA_LIST.filter(k=>k!=='玉'&&(h[k]||0)>0).forEach(k=>{
+    const div=document.createElement('div');
+    div.className='hp'+(selHand&&selHand.p===p&&selHand.k===k?' on':'');
+    div.innerHTML='<span class="hpt">'+k+'</span>'+(h[k]>1?'<span class="hpc">'+h[k]+'</span>':'');
+    div.addEventListener('click',()=>onHandClick(k,p));
+    el.appendChild(div);
+  });
+}
+
+function renderMvList(){
+  const seq=curSeq(); if(!seq)return;
+  const el=document.getElementById('mvsEl'); if(!el)return;
+  el.innerHTML='';
+  const list=mode==='practice'?seq.moves.slice(0,pracStep):seq.moves;
+  list.forEach((mv,i)=>{
+    const d=document.createElement('div');
+    d.className='mvi'+(i===curMv-1?' on':'');
+    d.textContent=(i+1)+'. '+mv.notation;
+    d.addEventListener('click',()=>{if(mode!=='practice')gotoMove(i+1);});
+    el.appendChild(d);
+  });
+}
+
+function updMoveCnt(){
+  const seq=curSeq();
+  document.getElementById('mvCnt').textContent=seq?curMv+'/'+seq.moves.length+'手':'';
+}
+
+// ======== クリック処理 ========
+function onCellClick(r,c){
+  if(mode==='review') return;
+  if(mode==='practice'&&(autoBusy||pracTurn()!==mySide())) return;
+  const pc=board[r][c];
+  const turn=mode==='record'?curTurn():pracTurn();
+
+  if(selHand){
+    // 持ち駒を打つ
+    const {k,p}=selHand;
+    if(p!==turn){selHand=null;renderBoard();return;}
+    if(pc){selHand=null;renderBoard();return;}
+    // 二歩チェック
+    if(k==='歩'&&board.some((row,ri)=>row[c]&&row[c].k==='歩'&&row[c].p===p)){
+      selHand=null;renderBoard();return;
+    }
+    const notation=(p==='sente'?'▲':'△')+(9-c)+('一二三四五六七八九'[r])+k+'打';
+    const mv={type:'drop',k,p,r,c,notation};
+    board[r][c]={k,p};
+    (p==='sente'?sHand:gHand)[k]--;
+    if((p==='sente'?sHand:gHand)[k]<=0) delete (p==='sente'?sHand:gHand)[k];
+    commitMove(mv);
+    selHand=null; renderBoard(); return;
+  }
+
+  if(selCell){
+    const[sr,sc]=selCell;
+    const spc=board[sr][sc];
+    if(!spc){selCell=null;renderBoard();return;}
+    if(spc.p!==turn){selCell=null;renderBoard();return;}
+    if(pc&&pc.p===spc.p){ selCell=[r,c]; renderBoard(); return; }
+    if(!canMoveTo(spc.k,spc.p,sr,sc,r,c)){selCell=null;renderBoard();return;}
+
+    const cap=pc?{...pc}:null;
+    const must=needsPromote(spc.k,spc.p,r);
+    const willEnter=inZone(spc.p,r);
+    const wasIn=inZone(spc.p,sr);
+
+    function doIt(promoted){
+      if(cap){
+        const hand=spc.p==='sente'?sHand:gHand;
+        const bk=baseK(cap.k);
+        hand[bk]=(hand[bk]||0)+1;
+      }
+      const newK=promoted?PROMO_MAP[spc.k]:spc.k;
+      board[r][c]={k:newK,p:spc.p};
+      board[sr][sc]=null;
+      const notation=(spc.p==='sente'?'▲':'△')+(9-c)+('一二三四五六七八九'[r])+spc.k+(promoted?'成':'');
+      const mv={type:'move',fr:sr,fc:sc,tr:r,tc:c,k:spc.k,p:spc.p,promoted,cap,notation};
+      commitMove(mv);
+      selCell=null; renderBoard();
+    }
+
+    if(must){doIt(true);return;}
+    if(canPromote(spc.k)&&(willEnter||wasIn)){
+      const promoK=PROMO_MAP[spc.k];
+      document.getElementById('promoModal').classList.add('on');
+      document.getElementById('promoYes').onclick=function(){document.getElementById('promoModal').classList.remove('on');doIt(true);};
+      document.getElementById('promoNo').onclick=function(){document.getElementById('promoModal').classList.remove('on');doIt(false);};
+    } else { doIt(false); }
+    return;
+  }
+
+  if(pc&&pc.p===turn){
+    selCell=[r,c]; renderBoard(); return;
+  }
+}
+
+function onHandClick(k,p){
+  if(mode==='review')return;
+  if(mode==='practice'&&(autoBusy||pracTurn()!==mySide()))return;
+  const turn=mode==='record'?curTurn():pracTurn();
+  if(p!==turn)return;
+  selHand=selHand&&selHand.k===k&&selHand.p===p?null:{k,p};
+  selCell=null;
+  renderBoard();
+}
+
+// ======== 手の記録 ========
+function commitMove(mv){
+  const seq=curSeq(); if(!seq)return;
+  if(mode==='record'){
+    seq.moves=seq.moves.slice(0,curMv);
+    seq.moves.push(mv); curMv++;
+    saveData();
+    setSt('💡','駒をタップして選択','info');
+  } else if(mode==='practice'){
+    checkPracMove(mv);
+  }
+}
+
+// ======== 棋譜再生 ========
+function applyMove(mv){
+  if(mv.type==='drop'){
+    board[mv.r][mv.c]={k:mv.k,p:mv.p};
+    (mv.p==='sente'?sHand:gHand)[mv.k]--;
+    if((mv.p==='sente'?sHand:gHand)[mv.k]<=0)delete (mv.p==='sente'?sHand:gHand)[mv.k];
+  } else {
+    if(mv.cap){const hand=mv.p==='sente'?sHand:gHand; const bk=baseK(mv.cap.k); hand[bk]=(hand[bk]||0)+1;}
+    board[mv.tr][mv.tc]={k:mv.promoted?PROMO_MAP[mv.k]:mv.k,p:mv.p};
+    board[mv.fr][mv.fc]=null;
+  }
+}
+function undoMove(mv){
+  if(mv.type==='drop'){
+    board[mv.r][mv.c]=null;
+    (mv.p==='sente'?sHand:gHand)[mv.k]=(((mv.p==='sente'?sHand:gHand)[mv.k])||0)+1;
+  } else {
+    board[mv.fr][mv.fc]={k:mv.k,p:mv.p};
+    board[mv.tr][mv.tc]=mv.cap?{...mv.cap}:null;
+    if(mv.cap){const hand=mv.p==='sente'?sHand:gHand; const bk=baseK(mv.cap.k); hand[bk]--; if(hand[bk]<=0)delete hand[bk];}
+  }
+}
+function gotoMove(target){
+  const seq=curSeq(); if(!seq)return;
+  initBoard();
+  for(let i=0;i<Math.min(target,seq.moves.length);i++) applyMove(seq.moves[i]);
+  curMv=Math.min(target,seq.moves.length);
+  renderBoard();
+}
+
+// ======== 練習モード ========
+let pracStep=0, pracCorrect=0, autoBusy=false, autoTimer=null;
+function mySide(){ const seq=curSeq(); return (seq&&seq.viewSide==='gote')?'gote':'sente'; }
+function autoReply(){
+  const seq=curSeq(); if(!seq||mode!=='practice')return;
+  if(pracStep>=seq.moves.length)return;
+  if(pracTurn()===mySide())return;
+  autoBusy=true;
+  clearTimeout(autoTimer);
+  autoTimer=setTimeout(()=>{
+    autoBusy=false;
+    if(mode!=='practice'||curSeq()!==seq)return;
+    const mv=seq.moves[pracStep];
+    applyMove(mv); curMv++; pracStep++; pracCorrect++;
+    renderBoard(); updPracProg();
+    if(pracStep>=seq.moves.length){
+      const score=Math.round(pracCorrect/seq.moves.length*100);
+      seq.bestScore=Math.max(seq.bestScore||0,score);
+      saveData(); renderSeqList();
+      setSt('🎉','完了！ スコア: '+score+'%','ok');
+    } else {
+      setSt('🤖','相手: '+mv.notation+'　次はあなたの番','info');
+      autoReply();
+    }
+  },600);
+}
+function pracTurn(){
+  const seq=curSeq(); if(!seq)return 'sente';
+  return (pracStep%2===0)?seq.firstTurn:(seq.firstTurn==='sente'?'gote':'sente');
+}
+function startPrac(){
+  const seq=curSeq(); if(!seq||!seq.moves.length){setSt('⚠️','手順がありません','ng');return;}
+  pracStep=0; pracCorrect=0; autoBusy=false; clearTimeout(autoTimer);
+  initBoard(); renderBoard();
+  updPracProg();
+  setSt('💡','正しい手を指してください','info');
+  autoReply();
+}
+function checkPracMove(mv){
+  const seq=curSeq(); if(!seq)return;
+  const expected=seq.moves[pracStep];
+  const ok=(mv.type===expected.type&&((mv.type==='drop'&&mv.k===expected.k&&mv.r===expected.r&&mv.c===expected.c)||(mv.type==='move'&&mv.fr===expected.fr&&mv.fc===expected.fc&&mv.tr===expected.tr&&mv.tc===expected.tc)));
+  if(ok){
+    pracStep++; pracCorrect++;
+    if(pracStep>=seq.moves.length){
+      const score=Math.round(pracCorrect/seq.moves.length*100);
+      seq.bestScore=Math.max(seq.bestScore||0,score);
+      saveData(); renderSeqList();
+      curMv++;
+      setSt('🎉','完了！ スコア: '+score+'%','ok');
+      updPracProg();
+      renderMvList();
+    } else {
+      setSt('✅','正解！','ok');
+      updPracProg();
+      curMv++;
+      renderMvList();
+      autoReply();
+    }
+  } else {
+    setSt('❌','不正解。もう一度','ng');
+    // 間違えた手を戻す
+    initBoard();
+    for(let i=0;i<pracStep;i++) applyMove(seq.moves[i]);
+    curMv=pracStep;
+    renderBoard();
+  }
+}
+function updPracProg(){
+  const seq=curSeq(); if(!seq)return;
+  const el=document.getElementById('progEl');
+  el.style.display='block';
+  document.getElementById('progF').style.width=(pracStep/seq.moves.length*100)+'%';
+  document.getElementById('progL').textContent=pracStep+'/'+seq.moves.length+'手';
+  document.getElementById('progR').textContent=seq.bestScore?'最高 '+seq.bestScore+'%':'';
+}
+
+// ======== UI helpers ========
+function setSt(ico,txt,cls){
+  document.getElementById('stIco').textContent=ico;
+  const el=document.getElementById('stTxt'); el.textContent=txt;
+  el.className='st '+cls;
+}
+function setMode(m){
+  mode=m; clearTimeout(autoTimer); autoBusy=false;
+  ['t0','t1','t2'].forEach((id,i)=>document.getElementById(id).classList.toggle('on',['record','practice','review'][i]===m));
+  const rn=document.getElementById('rnavEl');
+  const ctrl=document.getElementById('ctrlEl');
+  if(m==='review'){
+    rn.style.display='flex'; ctrl.style.display='none';
+    gotoMove(0); setSt('🔍','◀▶で手順を確認','info');
+  } else if(m==='practice'){
+    rn.style.display='none'; ctrl.style.display='none';
+    startPrac();
+  } else {
+    rn.style.display='none'; ctrl.style.display='flex';
+    setSt('💡','駒をタップして選択','info');
+  }
+  renderCmt();
+}
+
+// ======== 手順選択 ========
+function selectSeq(id){
+  curId=id; mode='record';
+  const seq=curSeq(); if(!seq)return;
+  initBoard();
+  for(let i=0;i<seq.moves.length;i++) applyMove(seq.moves[i]);
+  curMv=seq.moves.length;
+  document.getElementById('emptyState').style.display='none';
+  document.getElementById('tabsEl').style.display='flex';
+  document.getElementById('sbarEl').style.display='flex';
+  document.getElementById('bwrapEl').style.display='flex';
+  document.getElementById('ctrlEl').style.display='flex';
+  document.getElementById('flipBtn').style.display='flex';
+  document.getElementById('seqsecEl').style.display='flex';
+  document.getElementById('mvsEl').style.display='block';
+  document.getElementById('cmtEl').style.display='block';
+  document.getElementById('rnavEl').style.display='none';
+  document.getElementById('progEl').style.display='none';
+  setSt('💡','駒をタップして選択','info');
+  ['t0','t1','t2'].forEach((id2,i)=>document.getElementById(id2).classList.toggle('on',i===0));
+  renderBoard();
+  renderSeqList();
+  if(pendingMode){ const pm=pendingMode; pendingMode=null; if(pm!=='record') setMode(pm); }
+}
+
+// ======== トースト ========
+function showToast(msg){
+  const t=document.getElementById('toastEl');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+// ======== 画面切り替え ========
+function hideAllScreens(){
+  ['bwrapEl','cmtEl','tabsEl','ctrlEl','rnavEl','sbarEl','seqsecEl','mvsEl',
+   'homeScreen','emptyState','trashScreen','howtoScreen'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el)el.style.display='none';
+  });
+  const flip=document.getElementById('flipBtn');
+  if(flip)flip.style.display='none';
+  document.getElementById('mvCnt').textContent='';
+  document.getElementById('progEl').style.display='none';
+}
+function goHome(){
+  pendingMode=null;
+  curId=null; selCell=null; selHand=null; mode='record';
+  hideAllScreens();
+  document.getElementById('homeSeqCount').textContent=seqs.length+'件の手順';
+  document.getElementById('homeScreen').style.display='flex';
+}
+function homeAction(action){
+  pendingMode=null;
+  if(action==='new'){
+    hideAllScreens();
+    document.getElementById('seqsecEl').style.display='flex';
+    document.getElementById('seqList').style.display='block';
+    document.getElementById('emptyState').style.display=seqs.length?'none':'flex';
+    renderSeqList();
+    setTimeout(()=>document.getElementById('newBtn').click(),100);
+  } else if(action==='list'||action==='review'||action==='practice'){
+    pendingMode=action==='list'?null:action;
+    if(seqs.length&&pendingMode) showToast(action==='review'?'確認する手順を選んでください':'練習する手順を選んでください');
+    hideAllScreens();
+    document.getElementById('seqsecEl').style.display='flex';
+    document.getElementById('seqList').style.display='block';
+    document.getElementById('emptyState').style.display=seqs.length?'none':'flex';
+    renderSeqList();
+  } else if(action==='howto'){
+    hideAllScreens();
+    document.getElementById('howtoScreen').style.display='flex';
+  } else if(action==='trash'){
+    hideAllScreens();
+    document.getElementById('trashScreen').style.display='block';
+    renderTrash();
+  }
+}
+
+// ======== 新規作成 ========
+function toggleSenpo(){
+  const cat=document.getElementById('inCat').value;
+  document.getElementById('senpoFg').style.display=cat==='定跡'?'block':'none';
+}
+function updRadio(){
+  const v=document.querySelector('input[name="sp"]:checked').value;
+  document.getElementById('lblInit').style.borderColor=v==='init'?'var(--gd)':'var(--br)';
+  document.getElementById('lblCur').style.borderColor=v==='cur'?'var(--gd)':'var(--br)';
+  const vv=document.querySelector('input[name="view"]:checked')?.value||'sente';
+  document.getElementById('lblVS').style.borderColor=vv==='sente'?'var(--gd)':'var(--br)';
+  document.getElementById('lblVG').style.borderColor=vv==='gote'?'var(--gd)':'var(--br)';
+  const myLbl=document.getElementById('lblSenpoMy');
+  const opLbl=document.getElementById('lblSenpoOp');
+  if(myLbl&&opLbl){
+    if(vv==='gote'){myLbl.textContent='△ 後手（自分）の戦法'; opLbl.textContent='▲ 先手（相手）の戦法';}
+    else{myLbl.textContent='▲ 先手（自分）の戦法'; opLbl.textContent='△ 後手（相手）の戦法';}
+  }
+}
+function openModal(id){
+  document.getElementById(id).classList.add('on');
+  if(id==='newModal'){
+    document.getElementById('inSenpoMy').value='';
+    document.getElementById('inSenpoOp').value='';
+    toggleSenpo();
+  }
+}
+function closeModal(id){ document.getElementById(id).classList.remove('on'); }
+function createSeq(){
+  const name=document.getElementById('inName').value.trim();
+  if(!name){alert('手順名を入力してください');return;}
+  const cat=document.getElementById('inCat').value;
+  const senpoMy=cat==='定跡'?(document.getElementById('inSenpoMy').value.trim()||''):'';
+  const senpoOp=cat==='定跡'?(document.getElementById('inSenpoOp').value.trim()||''):'';
+  const senpo=senpoMy||senpoOp?(senpoMy||'?')+' vs '+(senpoOp||'?'):'';
+  const memo=document.getElementById('inMemo').value.trim();
+  const sp=document.querySelector('input[name="sp"]:checked').value;
+  const viewSide=document.querySelector('input[name="view"]:checked').value;
+  const ib=sp==='cur'?JSON.stringify(board):JSON.stringify(initBoardData());
+  const ish=sp==='cur'?JSON.stringify(sHand):'{}';
+  const igh=sp==='cur'?JSON.stringify(gHand):'{}';
+  const seq={id:Date.now()+'',name,cat,senpo,memo,moves:[],ib,ish,igh,created:new Date().toISOString(),bestScore:0,firstTurn:'sente',viewSide};
+  seqs.push(seq);
+  saveData();
+  closeModal('newModal');
+  document.getElementById('inName').value='';
+  document.getElementById('inMemo').value='';
+  renderSeqList();
+  selectSeq(seq.id);
+  hideAllScreens();
+  document.getElementById('seqsecEl').style.display='flex';
+  document.getElementById('emptyState').style.display='none';
+  selectSeq(seq.id);
+}
+
+// ======== 手順一覧 ========
+function makeSeqCard(s){
+  const div=document.createElement('div');
+  div.className='seqi'+(s.id===curId?' on':'');
+  const catIco={'定跡':'📖','手筋':'⚡','詰将棋':'🧩','その他':'📋'}[s.cat]||'📋';
+  const moveBadge=s.moves.length?s.moves.length+'手':'未記録';
+  const scoreBadge=s.bestScore?'最高 '+s.bestScore+'%':'';
+  div.innerHTML=
+    '<div class="seqi-ico">'+catIco+'</div>'+
+    '<div class="seqi-left">'+
+      '<div class="seqn">'+s.name+'</div>'+
+      '<div class="seqm">'+(s.senpo?'<span style="background:var(--gdh);color:var(--gd);border-radius:4px;padding:1px 5px;font-weight:800;font-size:9px">'+s.senpo+'</span>':s.cat)+'</div>'+
+    '</div>'+
+    '<div class="seqi-right">'+
+      '<span class="seqi-badge badge-moves">'+moveBadge+'</span>'+
+      (scoreBadge?'<span class="seqi-badge badge-score">'+scoreBadge+'</span>':'<span class="seqi-badge badge-new">NEW</span>')+
+    '</div>';
+  div.addEventListener('click',()=>selectSeq(s.id));
+  let pressTimer=null;
+  let startX=0,startY=0;
+  div.addEventListener('pointerdown',(e)=>{startX=e.clientX;startY=e.clientY;pressTimer=setTimeout(()=>{openCtxMenu(s.id,s.name);},300);});
+  div.addEventListener('pointerup',()=>clearTimeout(pressTimer));
+  div.addEventListener('pointercancel',()=>clearTimeout(pressTimer));
+  div.addEventListener('pointermove',(e)=>{if(Math.abs(e.clientX-startX)>10||Math.abs(e.clientY-startY)>10)clearTimeout(pressTimer);});
+  return div;
+}
+function renderSeqList(){
+  const el=document.getElementById('seqList');
+  el.innerHTML='';
+  const badge=document.getElementById('seqCountBadge');
+  if(badge)badge.textContent=seqs.length+'件';
+  if(!seqs.length){
+    el.innerHTML='<div style="font-size:13px;color:var(--tf);padding:12px 6px;text-align:center;letter-spacing:0.05em">📋 まだ手順がありません</div>';
+    return;
+  }
+  const cats=[...new Set(seqs.map(s=>s.cat||'未分類'))];
+  cats.forEach(cat=>{
+    const group=seqs.filter(s=>(s.cat||'未分類')===cat);
+    const catIco={'定跡':'📖','手筋':'⚡','詰将棋':'🧩','その他':'📋'}[cat]||'📋';
+    const hdr=document.createElement('div');
+    hdr.style.cssText='font-size:10px;font-weight:900;color:var(--gd);padding:6px 2px 2px;letter-spacing:0.05em';
+    hdr.textContent=catIco+' '+cat+'（'+group.length+'件）';
+    el.appendChild(hdr);
+    if(cat==='定跡'){
+      const senpos=[...new Set(group.map(s=>s.senpo||''))];
+      senpos.forEach(sp=>{
+        const sub=group.filter(s=>(s.senpo||'')===sp);
+        if(sp){
+          const shdr=document.createElement('div');
+          shdr.style.cssText='font-size:10px;font-weight:700;color:var(--tf);padding:3px 6px;margin-top:2px;background:var(--s3);border-radius:6px;display:inline-block';
+          shdr.textContent='⚔️ '+sp+'（'+sub.length+'）';
+          el.appendChild(shdr);
+        }
+        const grid=document.createElement('div');
+        grid.className='seql';
+        grid.style.marginBottom='4px';
+        sub.forEach(s=>grid.appendChild(makeSeqCard(s)));
+        el.appendChild(grid);
+      });
+    } else {
+      const grid=document.createElement('div');
+      grid.className='seql';
+      grid.style.marginBottom='4px';
+      group.forEach(s=>grid.appendChild(makeSeqCard(s)));
+      el.appendChild(grid);
+    }
+  });
+}
+
+// ======== ゴミ箱 ========
+function renderTrash(){
+  const el=document.getElementById('trashList');
+  el.innerHTML='';
+  if(!trash.length){
+    el.innerHTML='<div style="font-size:12px;color:var(--tf);padding:8px 0">ゴミ箱は空です</div>';
+    return;
+  }
+  [...trash].reverse().forEach(function(s,i){
+    const realIdx=trash.length-1-i;
+    const div=document.createElement('div');
+    div.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--s2);border-radius:8px;margin-bottom:6px;border:1px solid var(--br)';
+    const info=document.createElement('div');
+    info.innerHTML='<div style="font-size:12px;font-weight:800">'+s.name+'</div><div style="font-size:10px;color:var(--tf)">'+s.cat+' · '+s.moves.length+'手</div>';
+    const btnWrap=document.createElement('div');
+    btnWrap.id='trashBtnWrap_'+realIdx;
+    btnWrap.style.cssText='display:flex;flex-direction:column;gap:4px;flex-shrink:0';
+    const btn=document.createElement('button');
+    btn.textContent='復元';
+    btn.style.cssText='background:var(--gd);color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:800;cursor:pointer';
+    btn.addEventListener('click',function(){restoreTrash(realIdx);});
+    const delBtn=document.createElement('button');
+    delBtn.textContent='完全削除';
+    delBtn.style.cssText='background:#fee;color:#c00;border:1px solid #fcc;border-radius:6px;padding:5px 6px;font-size:10px;font-weight:800;cursor:pointer';
+    delBtn.addEventListener('click',function(){deleteFromTrash(realIdx);});
+    btnWrap.appendChild(btn); btnWrap.appendChild(delBtn);
+    div.appendChild(info); div.appendChild(btnWrap);
+    el.appendChild(div);
+  });
+}
+function emptyTrash(){
+  if(!trash.length)return;
+  const existing=document.getElementById('emptyTrashConf');
+  if(existing){existing.remove();return;}
+  const btn=document.getElementById('emptyTrashBtn');
+  if(!btn)return;
+  const conf=document.createElement('div');
+  conf.id='emptyTrashConf';
+  conf.style.cssText='display:inline-flex;gap:6px;align-items:center;margin-left:8px';
+  const yesBtn=document.createElement('button');
+  yesBtn.textContent='全削除';
+  yesBtn.style.cssText='background:#c00;color:#fff;border:none;border-radius:6px;padding:4px 8px;font-size:11px;font-weight:800;cursor:pointer';
+  yesBtn.addEventListener('click',function(){trash=[];saveData();renderTrash();showToast('ゴミ箱を空にしました');});
+  const noBtn=document.createElement('button');
+  noBtn.textContent='キャンセル';
+  noBtn.style.cssText='background:var(--s3);color:var(--tx);border:1px solid var(--br);border-radius:6px;padding:4px 8px;font-size:11px;font-weight:800;cursor:pointer';
+  noBtn.addEventListener('click',function(){conf.remove();});
+  conf.appendChild(yesBtn);conf.appendChild(noBtn);
+  btn.insertAdjacentElement('afterend',conf);
+}
+function deleteFromTrash(idx){
+  const s=trash[idx]; if(!s)return;
+  const el=document.getElementById('trashConfirm_'+idx);
+  if(el){ el.remove(); return; }
+  const wrap=document.getElementById('trashBtnWrap_'+idx);
+  if(!wrap)return;
+  const conf=document.createElement('div');
+  conf.id='trashConfirm_'+idx;
+  conf.style.cssText='display:flex;gap:6px;margin-top:6px;align-items:center';
+  const yesBtn=document.createElement('button');
+  yesBtn.textContent='本当に削除';
+  yesBtn.style.cssText='background:#c00;color:#fff;border:none;border-radius:6px;padding:5px 8px;font-size:10px;font-weight:800;cursor:pointer';
+  yesBtn.addEventListener('click',function(){trash.splice(idx,1);saveData();renderTrash();showToast('完全に削除しました');});
+  const noBtn=document.createElement('button');
+  noBtn.textContent='キャンセル';
+  noBtn.style.cssText='background:var(--s3);color:var(--tx);border:1px solid var(--br);border-radius:6px;padding:5px 8px;font-size:10px;font-weight:800;cursor:pointer';
+  noBtn.addEventListener('click',function(){conf.remove();});
+  conf.appendChild(yesBtn); conf.appendChild(noBtn);
+  wrap.parentElement.appendChild(conf);
+}
+function restoreTrash(idx){
+  const s=trash.splice(idx,1)[0];
+  delete s.deletedAt;
+  seqs.push(s); saveData(); renderTrash(); showToast('手順を復元しました ✅');
+}
+
+// ======== 長押しメニュー ========
+let ctxTargetId=null;
+function openCtxMenu(id,name){
+  ctxTargetId=id;
+  document.getElementById('ctxTitle').textContent=name;
+  document.getElementById('ctxOverlay').style.display='block';
+  document.getElementById('ctxMenu').style.display='block';
+}
+function closeCtxMenu(){
+  ctxTargetId=null;
+  document.getElementById('ctxOverlay').style.display='none';
+  document.getElementById('ctxMenu').style.display='none';
+}
+function ctxDelete(){
+  const seq=seqs.find(s=>s.id===ctxTargetId);
+  if(!seq)return closeCtxMenu();
+  trash.push({...seq,deletedAt:new Date().toISOString()});
+  seqs=seqs.filter(s=>s.id!==ctxTargetId);
+  if(curId===ctxTargetId)goHome();
+  saveData(); renderSeqList();
+  showToast('ゴミ箱に移動しました 🗑');
+  closeCtxMenu();
+}
+function ctxRename(){
+  const seq=seqs.find(s=>s.id===ctxTargetId);
+  if(!seq)return closeCtxMenu();
+  closeCtxMenu();
+  document.getElementById('renameInput').value=seq.name;
+  document.getElementById('renameModal').classList.add('on');
+}
+function submitRename(){
+  const seq=seqs.find(s=>s.id===ctxTargetId);
+  const val=document.getElementById('renameInput').value.trim();
+  if(seq&&val){seq.name=val; saveData(); renderSeqList(); showToast('名前を変更しました');}
+  document.getElementById('renameModal').classList.remove('on');
+}
+
+// ======== ボタンイベント ========
+document.getElementById('logoBtn').addEventListener('click',goHome);
+document.getElementById('newBtn').addEventListener('click',()=>openModal('newModal'));
+document.getElementById('themeBtn').addEventListener('click',()=>{
+  const d=document.documentElement;
+  const dark=d.getAttribute('data-theme')==='dark';
+  d.setAttribute('data-theme',dark?'light':'dark');
+  document.getElementById('themeBtn').textContent=dark?'🌙':'☀️';
+});
+document.getElementById('flipBtn').addEventListener('click',()=>{
+  const seq=curSeq(); if(!seq)return;
+  seq.viewSide=(seq.viewSide==='gote')?'sente':'gote';
+  saveData(); renderBoard();
+  if(mode==='practice')autoReply();
+});
+document.getElementById('undoBtn').addEventListener('click',()=>{
+  const seq=curSeq(); if(!seq||curMv<=0)return;
+  curMv--;
+  undoMove(seq.moves[curMv]);
+  seq.moves.splice(curMv,1);
+  if(seq.comments) delete seq.comments[curMv+1];
+  saveData(); renderBoard();
+});
+document.getElementById('resetBtn').addEventListener('click',()=>{
+  const seq=curSeq(); if(!seq)return;
+  if(confirm('この手順の手をリセットしますか？')){
+    seq.moves=[]; seq.comments={}; saveData(); initBoard(); curMv=0; renderBoard();
+  }
+});
+document.getElementById('saveBtn').addEventListener('click',()=>{
+  saveData(); showToast('保存しました 💾');
+});
+document.getElementById('cmtIn').addEventListener('input',e=>{
+  const seq=curSeq(); if(!seq||mode!=='record')return;
+  seq.comments=seq.comments||{};
+  const v=e.target.value;
+  if(v.trim()) seq.comments[curMv]=v; else delete seq.comments[curMv];
+  saveData();
+});
+document.getElementById('t0').addEventListener('click',()=>setMode('record'));
+document.getElementById('t1').addEventListener('click',()=>setMode('practice'));
+document.getElementById('t2').addEventListener('click',()=>setMode('review'));
+document.getElementById('rb0').addEventListener('click',()=>gotoMove(0));
+document.getElementById('rb1').addEventListener('click',()=>gotoMove(curMv-1));
+document.getElementById('rb2').addEventListener('click',()=>gotoMove(curMv+1));
+document.getElementById('rb3').addEventListener('click',()=>{const s=curSeq();if(s)gotoMove(s.moves.length);});
+document.querySelectorAll('input[name="sp"],input[name="view"]').forEach(r=>r.addEventListener('change',updRadio));
+
+// ======== 初期化 ========
+loadData();
+migrateSeqs();
+renderCoords();
+initBoard();
+renderBoard();
+goHome();
+// ======== PWA ========
+if('serviceWorker' in navigator&&location.protocol.startsWith('http')){navigator.serviceWorker.register('sw.js');}
+if(navigator.storage&&navigator.storage.persist){navigator.storage.persist();}
+</script>
+</body>
+</html>
